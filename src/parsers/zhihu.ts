@@ -3,7 +3,13 @@ import { ParseError, type MediaItem, type ParsedContent, type Parser } from "../
 const ua = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1";
 function textFromHtml(html: string): string { return html.replace(/<br\s*\/?\s*>/gi, "\n").replace(/<\/p>/gi, "\n").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").trim(); }
 function imageUrls(html: string): string[] {
-  const found = [...html.matchAll(/<img\b[^>]*(?:data-original|data-actualsrc|src)=["']([^"']+)["'][^>]*>/gi)].map(m => m[1].replace(/&amp;/g, "&"));
+  const found = [...html.matchAll(/<img\b[^>]*>/gi)].map(([tag]) => {
+    for (const name of ["data-original", "data-actualsrc", "src"]) {
+      const value = tag.match(new RegExp(`\\s${name}=["']([^"']+)["']`, "i"))?.[1];
+      if (value) return value.replace(/&amp;/g, "&");
+    }
+    return "";
+  });
   return [...new Set(found.filter(url => /^https:\/\//.test(url)))];
 }
 function videoVariants(playlist: any): { label: string; url: string; bitrate?: number }[] {
@@ -35,10 +41,16 @@ export const zhihuParser: Parser = {
       }
     } catch { /* exhausted */ }
     if (!data) throw new ParseError(blocked ? "LOGIN_REQUIRED" : "CONTENT_UNAVAILABLE", blocked ? "知乎限制了当前网络的公开内容访问" : "未能读取知乎内容", blocked ? 403 : 502);
-    const html = typeof data.content === "string" ? data.content : typeof data.content_html === "string" ? data.content_html : "";
-    const images = [...new Set([data.title_image, ...imageUrls(html)].filter((v): v is string => typeof v === "string" && v.startsWith("https://")))];
+    const blocks: any[] = Array.isArray(data.content) ? data.content : [];
+    const html = typeof data.content === "string" ? data.content : typeof data.content_html === "string" ? data.content_html : blocks.filter(block => block.type === "text").map(block => block.content || block.text || "").join("\n");
+    const blockImages = blocks.filter(block => block.type === "image").map(block => typeof block.url === "string" ? block.url : block.url?.url || block.image?.url);
+    const images = [...new Set([data.title_image, ...blockImages, ...imageUrls(html)].filter((v): v is string => typeof v === "string" && v.startsWith("https://")))];
     const media: MediaItem[] = images.map(url => ({ kind: "image", original: true, variants: [{ label: "原图", url }] }));
-    let videos = videoVariants(data.playlist || data.content?.find?.((v: any) => v.type === "video")?.playlist);
+    let videos = videoVariants(data.playlist);
+    for (const block of blocks.filter(block => block.type === "video")) {
+      const variants = videoVariants(block.playlist);
+      if (variants.length) media.push({ kind: "video", variants: variants.map(v => ({ ...v, mimeType: "video/mp4" })) });
+    }
     const lensId = html.match(/data-lens-id=["'](\d+)["']/)?.[1];
     if (!videos.length && lensId) try {
       const response = await fetcher(`https://lens.zhihu.com/api/v4/videos/${lensId}`, { headers: { "user-agent": ua, referer: "https://www.zhihu.com/" }, signal: AbortSignal.timeout(8000) });

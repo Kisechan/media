@@ -54,6 +54,22 @@ describe("public content parsing", () => {
     expect(result.text).toBe("真实正文");
     expect(result.media[0].variants[0].url).toBe("https://picx.zhimg.com/original.jpg");
   });
+  it("prefers Zhihu original images regardless of attribute order", async () => {
+    const content = '<img data-original="https://picx.zhimg.com/original.jpg" src="https://picx.zhimg.com/thumb.jpg">';
+    const result = await zhihuParser.parse(new URL("https://zhuanlan.zhihu.com/p/123"), responder({ content }));
+    expect(result.media[0].variants[0].url).toBe("https://picx.zhimg.com/original.jpg");
+  });
+  it("preserves text, images and multiple videos in Zhihu pins", async () => {
+    const content = [
+      { type: "text", content: "<p>想法正文</p>" },
+      { type: "image", url: "https://picx.zhimg.com/pin.jpg" },
+      ...[1, 2].map(id => ({ type: "video", playlist: { hd: { play_url: `https://vd.vzuu.com/${id}.mp4` } } })),
+    ];
+    const result = await zhihuParser.parse(new URL("https://www.zhihu.com/pin/123"), responder({ content }));
+    expect(result.text).toBe("想法正文");
+    expect(result.media.map(item => item.kind)).toEqual(["image", "video", "video"]);
+    expect(result.media[0].variants[0].url).toBe("https://picx.zhimg.com/pin.jpg");
+  });
 });
 
 describe("signed resource access", () => {
