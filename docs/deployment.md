@@ -2,6 +2,12 @@
 
 当前状态：Cloudflare 预览环境已部署；正式环境验收门槛尚未通过。
 
+2026-11-06：按用户限定保留纯 Worker 解析，Browser Rendering 回退已移除。纯 Worker 的真实小红书请求仍为 403，依据用户指示停止此方案迭代及正式部署，详见 `docs/verification.md`。
+
+正式服务域名按用户指定为 `r.kisechan.space` 和 `resole.kisechan.space`，在全部验收通过后指向同一 Worker。
+
+预览继续使用 `workers.dev`。2026-11-06 自定义预览域名配置因 Cloudflare 要求主 Worker 已有 deployment 而返回错误 100124；用户选择继续使用 workers.dev。当前关闭正式 workers.dev 路由，保留 Preview URL。尚未绑定正式域名。
+
 1. `npm install`、`npm test`、`npm run check`。
 2. 使用 `cf auth login` 为本机 CLI 授权；连接器登录状态不会自动传给 CLI。
 3. 在 Cloudflare 配置 `TURNSTILE_SECRET`、`RESOURCE_SIGNING_KEY` 和 `API_KEY`。签名密钥使用至少 32 字节随机值。正式环境还需创建真实 Turnstile widget，把站点密钥写入 `cloudflare.config.ts` 中的生产 `TURNSTILE_SITE_KEY` 配置。测试密钥仅供开发和预览使用。

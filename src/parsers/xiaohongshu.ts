@@ -1,6 +1,7 @@
 import { ParseError, type MediaItem, type ParsedContent, type Parser } from "../types";
 
 const desktop = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36";
+const botDesktop = "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 UBrowser/6.2.4098.3 Safari/537.36";
 const mobile = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1";
 function record(value: any): Record<string, any> { return value && typeof value === "object" && !Array.isArray(value) ? value : {}; }
 function imageUrl(value: any): string | undefined {
@@ -42,9 +43,13 @@ export const xiaohongshuParser: Parser = {
     if (!id) throw new ParseError("INVALID_URL", "小红书链接缺少笔记 ID", 400);
     let note: Record<string, any> = {};
     let blocked = false;
-    for (const ua of [desktop, mobile]) {
+    const explore = new URL(url);
+    explore.pathname = `/explore/${id}`;
+    const international = new URL(url);
+    international.hostname = "www.rednote.com";
+    for (const [target, ua] of [[url, desktop], [international, desktop], [explore, botDesktop], [url, mobile]] as const) {
       let response: Response;
-      try { response = await fetcher(url, { headers: { "user-agent": ua, referer: "https://www.xiaohongshu.com/", accept: "text/html" }, redirect: "follow", signal: AbortSignal.timeout(10000) }); }
+      try { response = await fetcher(target, { headers: { "user-agent": ua, referer: "https://www.xiaohongshu.com/", accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8" }, redirect: "follow", signal: AbortSignal.timeout(10000) }); }
       catch { continue; }
       if (response.url.includes("/login") || response.status === 403) { blocked = true; continue; }
       if (!response.ok) continue;

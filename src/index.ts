@@ -60,7 +60,7 @@ export default {
         } else if (!env.API_KEY || request.headers.get("authorization") !== `Bearer ${env.API_KEY}`) throw new ParseError("UNAUTHORIZED", "程序 API 需要有效的 Bearer API Key", 401);
         if (!env.RESOURCE_SIGNING_KEY) throw new ParseError("NOT_CONFIGURED", "资源签名密钥尚未配置", 503);
         const resolved = await resolveLink(link, typeof platform === "string" ? platform : undefined);
-        const cacheKey = new Request(new URL(`/api/internal/cache/v4/${resolved.platform}/${encodeURIComponent(resolved.url.href)}`, request.url));
+        const cacheKey = new Request(new URL(`/api/internal/cache/v5/${resolved.platform}/${encodeURIComponent(resolved.url.href)}`, request.url));
         const cached = await (caches as any).default.match(cacheKey);
         if (cached) return contentResponse(await cached.json() as ParsedContent, "HIT");
         const content = await signContent(await parsers[resolved.platform].parse(resolved.url), env.RESOURCE_SIGNING_KEY);

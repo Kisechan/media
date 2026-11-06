@@ -1,7 +1,7 @@
 import { ParseError, type Platform } from "./types";
 
 const hosts: Record<Platform, string[]> = {
-  xiaohongshu: ["xiaohongshu.com", "www.xiaohongshu.com", "xhslink.com", "www.xhslink.com", "xhslink.cn", "www.xhslink.cn"],
+  xiaohongshu: ["xiaohongshu.com", "www.xiaohongshu.com", "rednote.com", "www.rednote.com", "xhslink.com", "www.xhslink.com", "xhslink.cn", "www.xhslink.cn"],
   zhihu: ["zhihu.com", "www.zhihu.com", "zhuanlan.zhihu.com", "link.zhihu.com"],
   x: ["x.com", "www.x.com", "twitter.com", "www.twitter.com", "mobile.twitter.com", "t.co"],
 };

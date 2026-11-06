@@ -6,7 +6,7 @@ export default defineConfig(({ isPreview, mode }) => ({
     entrypoint: "./src/index.ts",
     compatibilityDate: "2026-10-30",
     assets: { runWorkerFirst: ["/api/*", "/config.json"] },
-    workersDev: true,
+    workersDev: false,
     previewUrls: true,
     env: {
       ENVIRONMENT: bindings.text(isPreview ? "preview" : mode === "development" ? "development" : "production"),

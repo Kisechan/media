@@ -1,5 +1,15 @@
 # 验证记录
 
+## 2026-11-06 最终限定验证
+
+用户要求以纯 Cloudflare Worker 实现 AstrBot 式小红书解析，放弃浏览器或其他服务回退。已移除临时 Browser Rendering 模块、绑定、依赖和兼容标志，缓存版本更新为 v5，避免复用浏览器解析缓存。
+
+纯 Worker 版本部署 ID：`ce02316a-1cf0-4abf-918e-3e2340ee6f3d`。[对应预览](https://ce02316a-media-parser-tool.kisechan.workers.dev)。远程客户端向该版本提交真实短链 `https://xhslink.cn/o/8tGdJnRlIgq`，响应 `403 LOGIN_REQUIRED`、无缓存命中。已尝试完整分享参数、PC/移动 UA、AstrBot 参考 UA、explore/discovery 页面与 rednote 国际站。直接 fetch 的路径仍受平台访问限制。
+
+本地 workerd 的 20 张源文件下载成功仅代表本地出口；此前临时浏览器方案在预览下载 20 张成功的结果属于已移除架构，不能用于当前方案验收。当前方案回归 12/12、类型与 dry-run 构建通过，三平台真实验收仍未满足。
+
+按用户“实现不了则放弃”的要求，停止当前方案的继续迭代及正式部署。保留代码、预览和真实验证记录；正式域名 `r.kisechan.space`、`resole.kisechan.space` 尚未启用。
+
 日期：2026-11-01 至 2026-11-06；环境：macOS + 本地 `workerd`、Cloudflare [预览环境](https://media-parser-validation-media-parser-tool.kisechan.workers.dev)。以下均为真实公开链接与真实 HTTP 请求；单元测试中的 fixture 不计入平台成功率。
 
 | 项目 | 结果 | 证据 |
