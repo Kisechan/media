@@ -55,7 +55,12 @@ export const xiaohongshuParser: Parser = {
       note = {};
     }
     if (!Object.keys(note).length) throw new ParseError(blocked ? "LOGIN_REQUIRED" : "CONTENT_UNAVAILABLE", blocked ? "小红书要求登录或限制了当前网络访问" : "未能读取笔记内容；分享链接可能已失效", blocked ? 403 : 502);
-    const images: MediaItem[] = (Array.isArray(note.imageList) ? note.imageList : []).map((img: any) => imageUrl(img)).filter((url: string | undefined): url is string => !!url).map((url: string) => ({ kind: "image", original: true, watermarkFree: true, variants: [{ label: "原图", url }] }));
+    const images: MediaItem[] = (Array.isArray(note.imageList) ? note.imageList : []).flatMap((img: any) => {
+      const url = imageUrl(img);
+      if (!url) return [];
+      const original = typeof img.fileId === "string" && !!img.fileId;
+      return [{ kind: "image" as const, original, watermarkFree: original ? true : null, variants: [{ label: img.livePhoto ? "实况静态源图" : original ? "原图" : "图片源", url, width: img.width, height: img.height }] }];
+    });
     const candidates = videoUrls(note);
     const checked = await Promise.all(candidates.map(async video => {
       try {

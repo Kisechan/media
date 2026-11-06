@@ -1,4 +1,5 @@
 import { resolveLink } from "./links";
+import { fetchMedia } from "./media-fetch";
 import { xParser } from "./parsers/x";
 import { xiaohongshuParser } from "./parsers/xiaohongshu";
 import { zhihuParser } from "./parsers/zhihu";
@@ -76,12 +77,13 @@ export default {
         const headers = new Headers();
         const range = request.headers.get("range");
         if (range && /^bytes=\d*-\d*$/.test(range)) headers.set("range", range);
-        const upstream = await fetch(resource, { method: request.method, headers, redirect: "manual", signal: AbortSignal.timeout(15000) });
+        const upstream = await fetchMedia(resource, { method: request.method, headers });
         if (!upstream.ok && upstream.status !== 206) throw new ParseError("RESOURCE_UNAVAILABLE", `媒体源返回 ${upstream.status}`, 502);
         const responseHeaders = new Headers();
         for (const name of ["content-type", "content-length", "content-range", "accept-ranges"]) { const value = upstream.headers.get(name); if (value) responseHeaders.set(name, value); }
         const inline = new URL(request.url).searchParams.get("inline") === "1";
-        responseHeaders.set("content-disposition", `${inline ? "inline" : "attachment"}; filename="media-${Date.now()}"`);
+        const extension = ({ "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp", "image/gif": ".gif", "video/mp4": ".mp4" } as Record<string, string>)[(upstream.headers.get("content-type") || "").split(";")[0]] || "";
+        responseHeaders.set("content-disposition", `${inline ? "inline" : "attachment"}; filename="media-${Date.now()}${extension}"`);
         responseHeaders.set("cache-control", "private, max-age=300");
         return new Response(upstream.body, { status: upstream.status, headers: responseHeaders });
       }
