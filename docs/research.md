@@ -14,4 +14,4 @@
 
 架构选择：[Cloudflare Workers Best Practices](https://developers.cloudflare.com/workers/best-practices/workers-best-practices/) 推荐新项目使用 Workers Static Assets；[cf 项目文档](https://developers.cloudflare.com/cf/projects/) 提供 `cf build`、`cf previews deploy`。单 Worker 承载静态资源与 API，避免 Pages 与 Worker 之间的跨域配置。按 [Turnstile 官方文档](https://developers.cloudflare.com/turnstile/get-started/server-side-validation/) 在服务端校验 token；按 [Rate Limiting binding](https://developers.cloudflare.com/workers/runtime-apis/bindings/rate-limit/) 按 IP 限流；按 [Cache API](https://developers.cloudflare.com/workers/runtime-apis/cache/) 缓存公开解析结果。缓存按数据中心生效，限流为近似值。
 
-免费额度关注点：[Workers subrequest 限制](https://developers.cloudflare.com/changelog/post/2026-02-11-subrequests-limit/) 在免费计划为每请求 50 次外部子请求。本站设置更低的 20 次上限；资源代理为流式传输，视频仍会消耗平台出口和 Cloudflare 带宽，应继续观察实际用量。
+免费额度关注点：[Workers subrequest 限制](https://developers.cloudflare.com/changelog/post/2026-02-11-subrequests-limit/) 在免费计划为每请求 50 次外部子请求。采用免费计划默认限制；资源代理为流式传输，视频仍会消耗平台出口和 Cloudflare 带宽，应继续观察实际用量。

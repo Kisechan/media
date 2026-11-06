@@ -6,7 +6,7 @@ function record(value: any): Record<string, any> { return value && typeof value 
 function imageUrl(value: any): string | undefined {
   const image = record(value);
   const fileId = image.fileId;
-  if (typeof fileId === "string" && fileId) return `https://sns-img-qc.xhscdn.com/${fileId}?imageView2/2/w/1920/format/jpg`;
+  if (typeof fileId === "string" && fileId) return `https://sns-img-bd.xhscdn.com/${fileId}`;
   const url = image.urlDefault || image.url || image.infoList?.[0]?.url;
   if (typeof url !== "string") return undefined;
   return url.split("!")[0].replace("http://", "https://");
@@ -25,7 +25,7 @@ function videoUrls(note: Record<string, any>): { url: string; watermarkFree: boo
   } catch { /* optional representation */ }
   const stream = video.media?.stream || video.stream || {};
   for (const codec of ["h264", "h265", "av1"]) for (const item of stream[codec] || []) {
-    if (typeof item.masterUrl === "string") result.push({ url: item.masterUrl, watermarkFree: [258, 301].includes(item.streamType) || String(item.streamDesc).includes("X264_MP4") ? true : null, label: `${codec.toUpperCase()} ${item.width || ""}×${item.height || ""}` });
+    if (typeof item.masterUrl === "string") result.push({ url: item.masterUrl.replace(/^http:\/\//, "https://"), watermarkFree: [258, 301].includes(item.streamType) || String(item.streamDesc).includes("X264_MP4") ? true : null, label: `${codec.toUpperCase()} ${item.width || ""}×${item.height || ""}` });
   }
   return result.filter((v, i) => result.findIndex(other => other.url === v.url) === i).sort((a, b) => Number(b.watermarkFree === true) - Number(a.watermarkFree === true));
 }
@@ -56,8 +56,15 @@ export const xiaohongshuParser: Parser = {
     }
     if (!Object.keys(note).length) throw new ParseError(blocked ? "LOGIN_REQUIRED" : "CONTENT_UNAVAILABLE", blocked ? "小红书要求登录或限制了当前网络访问" : "未能读取笔记内容；分享链接可能已失效", blocked ? 403 : 502);
     const images: MediaItem[] = (Array.isArray(note.imageList) ? note.imageList : []).map((img: any) => imageUrl(img)).filter((url: string | undefined): url is string => !!url).map((url: string) => ({ kind: "image", original: true, watermarkFree: true, variants: [{ label: "原图", url }] }));
-    const videos = videoUrls(note);
+    const candidates = videoUrls(note);
+    const checked = await Promise.all(candidates.map(async video => {
+      try {
+        const response = await fetcher(video.url, { method: "HEAD", signal: AbortSignal.timeout(5000) });
+        return response.ok ? video : null;
+      } catch { return null; }
+    }));
+    const videos = checked.filter((video): video is NonNullable<typeof video> => video !== null);
     const media: MediaItem[] = [...images, ...(videos.length ? [{ kind: "video" as const, thumbnail: imageUrl(note.cover), watermarkFree: videos[0].watermarkFree, variants: videos.map(v => ({ label: v.label, url: v.url, mimeType: "video/mp4" })) }] : [])];
-    return { platform: "xiaohongshu", id, sourceUrl: url.href, type: videos.length ? "video" : "post", title: String(note.title || ""), author: { name: String(note.user?.nickname || note.user?.nickName || ""), id: note.user?.userId, avatar: note.user?.avatar }, text: String(note.desc || ""), media, warnings: videos.length && videos[0].watermarkFree !== true ? ["视频源未能确认无水印。"] : [] };
+    return { platform: "xiaohongshu", id, sourceUrl: url.href, type: note.type === "video" || candidates.length ? "video" : "post", title: String(note.title || ""), author: { name: String(note.user?.nickname || note.user?.nickName || ""), id: note.user?.userId, avatar: note.user?.avatar }, text: String(note.desc || ""), media, warnings: [...(candidates.length && !videos.length ? ["原站提供的视频地址目前不可访问。"] : []), ...(videos.length && videos[0].watermarkFree !== true ? ["视频源未能确认无水印。"] : [])] };
   },
 };

@@ -34,8 +34,19 @@ describe("public content parsing", () => {
     const html = `<script>window.__INITIAL_STATE__ = ${JSON.stringify(state)}</script>`;
     const result = await xiaohongshuParser.parse(new URL(`https://www.xiaohongshu.com/explore/${id}?xsec_token=abc`), responder(html));
     expect(result.text).toBe("正文");
-    expect(result.media[0].variants[0].url).toContain("sns-img-qc.xhscdn.com/image-id");
+    expect(result.media[0].variants[0].url).toContain("sns-img-bd.xhscdn.com/image-id");
     expect(result.media[1].variants[0].url).toContain("pre_post/origin");
+  });
+  it("drops expired XHS video URLs and upgrades stream URLs to HTTPS", async () => {
+    const id = "68e66fef0000000004023fdb";
+    const note = { noteId: id, title: "视频", desc: "正文", video: { consumer: { originVideoKey: "pre_post/expired" }, media: { stream: { h264: [{ masterUrl: "http://sns-video-v6.xhscdn.com/live.mp4", width: 720, height: 960 }] } } } };
+    const html = `<script>window.__INITIAL_STATE__=${JSON.stringify({ note: { noteDetailMap: { [id]: { note } } } })}</script>`;
+    const fetcher = (async (input: string | URL | Request, init?: RequestInit) => {
+      if (init?.method !== "HEAD") return new Response(html);
+      return new Response(null, { status: String(input).includes("expired") ? 404 : 200 });
+    }) as typeof fetch;
+    const result = await xiaohongshuParser.parse(new URL(`https://www.xiaohongshu.com/explore/${id}?xsec_token=valid`), fetcher);
+    expect(result.media.find(item => item.kind === "video")?.variants.map(item => item.url)).toEqual(["https://sns-video-v6.xhscdn.com/live.mp4"]);
   });
   it("extracts Zhihu article body, image and author", async () => {
     const article = { title: "文章标题", content: '<p>真实正文</p><img data-original="https://picx.zhimg.com/original.jpg">', author: { name: "作者" } };
